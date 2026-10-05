@@ -52,16 +52,21 @@ footer{text-align:center;color:var(--mut);padding:30px 20px;font-size:.85rem;bor
 <footer>Mau iklan di sini? <a id="tgFoot" target="_blank" rel="noopener" style="color:var(--ac)">Hubungi via Telegram</a></footer>
 <script>
 /* GANTI dengan alamat web penyimpanan kamu */
-var STORAGE="https://ziaa2.github.io/stream-storage/";
+var OWNER="USERNAME",REPO="streaming-storage",BRANCH="main";
+var RAW="https://raw.githubusercontent.com/"+OWNER+"/"+REPO+"/"+BRANCH+"/";
 
 function $(i){return document.getElementById(i)}
 function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x)e.textContent=x;return e}
 function safe(u){return /^https?:\/\//i.test(u)?u:null}
-function abs(p){return safe(p)?p:STORAGE+p}
+function imgu(n){return !n?"":safe(n)?n:RAW+"img/"+n}
 var D={telegram:"",site:"Nonton",videos:[],ads:[]};
 
-fetch(STORAGE+"data.json",{cache:"no-store"}).then(function(r){return r.json()})
-.then(function(j){D=j}).catch(function(){}).then(init);
+fetch("https://api.github.com/repos/"+OWNER+"/"+REPO+"/contents/data.json?ref="+BRANCH,{headers:{Accept:"application/vnd.github.raw+json"},cache:"no-store"})
+.then(function(r){if(!r.ok)throw 0;return r.json()})
+.catch(function(){return fetch(RAW+"data.json?t="+Date.now()).then(function(r){return r.json()})})
+.then(function(j){D=j})
+.catch(function(){$("player").textContent="Gagal memuat data. Cek OWNER dan REPO di index.html"})
+.then(init);
 
 function tg(){return "https://t.me/"+String(D.telegram||"").replace("@","")}
 function init(){
@@ -71,7 +76,7 @@ function init(){
  D.videos.forEach(function(v,n){
   var c=el("div","card");c.tabIndex=0;c.style.animationDelay=(n*60)+"ms";
   var im=el("img","th");im.loading="lazy";im.alt="";
-  im.src=abs("img/"+v.img);im.onerror=function(){im.removeAttribute("src")};
+  im.src=imgu(v.img);im.onerror=function(){im.removeAttribute("src")};
   c.appendChild(im);c.appendChild(el("p","",v.title));
   c.onclick=function(){play(v,c)};
   c.onkeydown=function(e){if(e.key==="Enter")play(v,c)};
@@ -83,7 +88,7 @@ function init(){
 function play(v,card,first){
  var p=$("player");p.textContent="";
  var u=safe(v.url);if(!u){p.textContent="Link video tidak valid";return}
- var m;if(/\.(mp4|webm|m3u8)(\?|$)/i.test(u)){m=el("video");m.controls=true;m.src=u;m.playsInline=true;m.poster=abs("img/"+v.img)}
+ var m;if(/\.(mp4|webm|m3u8)(\?|$)/i.test(u)){m=el("video");m.controls=true;m.src=u;m.playsInline=true;m.poster=imgu(v.img)}
  else{m=el("iframe");m.src=u;m.allowFullscreen=true;m.allow="autoplay; fullscreen";m.referrerPolicy="no-referrer"}
  p.appendChild(m);
  $("vt").textContent=v.title;$("vd").textContent=v.desc||"";
@@ -95,7 +100,7 @@ function ads(id,slot,min){
  list.forEach(function(a){
   var l=el("a","ad");l.href=safe(a.link)||"#";l.target="_blank";l.rel="sponsored noopener";
   l.appendChild(el("b","","Iklan"));
-  if(a.img){var i=el("img");i.src=abs("img/"+a.img);i.alt=a.text||"Iklan";l.appendChild(i)}
+  if(a.img){var i=el("img");i.src=imgu(a.img);i.alt=a.text||"Iklan";l.appendChild(i)}
   if(a.text)l.appendChild(el("span","",a.text));
   box.appendChild(l);
  });
