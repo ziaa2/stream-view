@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="id"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Nonton</title>
+<style>
+:root{--bg:#0d1117;--bg2:#151b24;--ln:#243040;--tx:#e9eef4;--mut:#8b9bad;--ac:#3ec6a8;--r:12px}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:"Segoe UI",Roboto,sans-serif;line-height:1.5}
+a{color:inherit;text-decoration:none}
+header{position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;align-items:center;padding:12px 20px;background:rgba(13,17,23,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--ln)}
+.logo{font-weight:700;font-size:1.2rem;letter-spacing:.3px}
+.btn{display:inline-block;background:var(--ac);color:#06201a;padding:8px 16px;border-radius:99px;font-weight:600;font-size:.9rem;transition:transform .2s,box-shadow .2s}
+.btn:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(62,198,168,.3)}
+.btn:focus-visible,.card:focus-visible{outline:3px solid var(--ac);outline-offset:2px}
+.wrap{max-width:1200px;margin:0 auto;padding:20px;display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:24px}
+.player{aspect-ratio:16/9;background:#000;border-radius:var(--r);overflow:hidden;display:grid;place-items:center;color:var(--mut)}
+.player video,.player iframe{width:100%;height:100%;border:0}
+h1{font-size:1.3rem;margin:14px 0 4px}h2{font-size:1.05rem;margin:28px 0 12px}
+.desc{color:var(--mut);margin:0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px}
+.card{background:var(--bg2);border:1px solid var(--ln);border-radius:var(--r);overflow:hidden;cursor:pointer;transition:transform .25s,border-color .25s;animation:in .5s both}
+.card:hover{transform:translateY(-4px);border-color:var(--ac)}
+.card.on{border-color:var(--ac)}
+.th{aspect-ratio:16/9;background:linear-gradient(135deg,#1d3b4a,#17262f);display:block;width:100%;object-fit:cover}
+.card p{margin:0;padding:10px 12px;font-size:.92rem}
+.ad{position:relative;display:block;background:var(--bg2);border:1px solid var(--ln);border-radius:var(--r);overflow:hidden;transition:border-color .25s}
+.ad:hover{border-color:var(--ac)}
+.ad img{display:block;width:100%;height:auto}
+.ad b{position:absolute;top:6px;left:6px;background:rgba(0,0,0,.65);color:var(--mut);font-size:.65rem;font-weight:500;padding:1px 7px;border-radius:99px}
+.ad span{display:block;padding:10px 12px;font-size:.88rem;color:var(--mut)}
+.empty{display:block;text-align:center;border:1px dashed var(--ln);border-radius:var(--r);padding:18px;color:var(--mut);font-size:.85rem;transition:border-color .25s}
+.empty:hover{border-color:var(--ac);color:var(--tx)}
+aside{display:flex;flex-direction:column;gap:14px;position:sticky;top:76px;align-self:start}
+.slot{margin:14px 0}
+footer{text-align:center;color:var(--mut);padding:30px 20px;font-size:.85rem;border-top:1px solid var(--ln)}
+@keyframes in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media(max-width:900px){.wrap{grid-template-columns:1fr}aside{position:static}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto}}
+</style></head><body>
+<header><a class="logo" href="./" id="site">Nonton</a><a class="btn" id="tgTop" target="_blank" rel="noopener">Pasang iklan</a></header>
+<div class="wrap">
+ <main>
+  <div class="player" id="player">Pilih video di bawah</div>
+  <h1 id="vt"></h1><p class="desc" id="vd"></p>
+  <div class="slot" id="adBelow"></div>
+  <h2>Video lainnya</h2>
+  <div class="grid" id="grid"></div>
+ </main>
+ <aside id="adSide"></aside>
+</div>
+<footer>Mau iklan di sini? <a id="tgFoot" target="_blank" rel="noopener" style="color:var(--ac)">Hubungi via Telegram</a></footer>
+<script>
+/* GANTI dengan alamat web penyimpanan kamu */
+var STORAGE="https://USERNAME.github.io/streaming-storage/";
+
+function $(i){return document.getElementById(i)}
+function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x)e.textContent=x;return e}
+function safe(u){return /^https?:\/\//i.test(u)?u:null}
+function abs(p){return safe(p)?p:STORAGE+p}
+var D={telegram:"",site:"Nonton",videos:[],ads:[]};
+
+fetch(STORAGE+"data.json",{cache:"no-store"}).then(function(r){return r.json()})
+.then(function(j){D=j}).catch(function(){}).then(init);
+
+function tg(){return "https://t.me/"+String(D.telegram||"").replace("@","")}
+function init(){
+ $("site").textContent=D.site||"Nonton";document.title=D.site||"Nonton";
+ $("tgTop").href=$("tgFoot").href=tg();
+ var g=$("grid");
+ D.videos.forEach(function(v,n){
+  var c=el("div","card");c.tabIndex=0;c.style.animationDelay=(n*60)+"ms";
+  var im=el("img","th");im.loading="lazy";im.alt="";
+  im.src=abs("img/"+v.img);im.onerror=function(){im.removeAttribute("src")};
+  c.appendChild(im);c.appendChild(el("p","",v.title));
+  c.onclick=function(){play(v,c)};
+  c.onkeydown=function(e){if(e.key==="Enter")play(v,c)};
+  g.appendChild(c);v.card=c;
+ });
+ ads("adBelow","below",1);ads("adSide","side",2);
+ if(D.videos[0])play(D.videos[0],D.videos[0].card,true);
+}
+function play(v,card,first){
+ var p=$("player");p.textContent="";
+ var u=safe(v.url);if(!u){p.textContent="Link video tidak valid";return}
+ var m;if(/\.(mp4|webm|m3u8)(\?|$)/i.test(u)){m=el("video");m.controls=true;m.src=u;m.playsInline=true;m.poster=abs("img/"+v.img)}
+ else{m=el("iframe");m.src=u;m.allowFullscreen=true;m.allow="autoplay; fullscreen";m.referrerPolicy="no-referrer"}
+ p.appendChild(m);
+ $("vt").textContent=v.title;$("vd").textContent=v.desc||"";
+ document.querySelectorAll(".card.on").forEach(function(x){x.classList.remove("on")});card.classList.add("on");
+ if(!first)window.scrollTo({top:0,behavior:"smooth"});
+}
+function ads(id,slot,min){
+ var box=$(id),list=D.ads.filter(function(a){return a.slot===slot});
+ list.forEach(function(a){
+  var l=el("a","ad");l.href=safe(a.link)||"#";l.target="_blank";l.rel="sponsored noopener";
+  l.appendChild(el("b","","Iklan"));
+  if(a.img){var i=el("img");i.src=abs("img/"+a.img);i.alt=a.text||"Iklan";l.appendChild(i)}
+  if(a.text)l.appendChild(el("span","",a.text));
+  box.appendChild(l);
+ });
+ for(var k=list.length;k<min;k++){
+  var e=el("a","empty","Slot iklan kosong. Pasang iklanmu, hubungi via Telegram");
+  e.href=tg();e.target="_blank";e.rel="noopener";box.appendChild(e);
+ }
+}
+</script></body></html>
