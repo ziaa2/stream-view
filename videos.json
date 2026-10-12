@@ -1,0 +1,20 @@
+[
+  {
+    "judul": "Contoh video pertama",
+    "url": "https://GANTI-DENGAN-LINK-IMGG/video-1.mp4",
+    "kat": "Santai",
+    "tgl": "2026-10-10"
+  },
+  {
+    "judul": "Contoh video kedua",
+    "url": "https://GANTI-DENGAN-LINK-IMGG/video-2.mp4",
+    "kat": "Lucu",
+    "tgl": "2026-10-11"
+  },
+  {
+    "judul": "Contoh video ketiga",
+    "url": "https://GANTI-DENGAN-LINK-IMGG/video-3.mp4",
+    "kat": "Santai",
+    "tgl": "2026-10-12"
+  }
+]
