@@ -52,7 +52,18 @@ button,input,textarea{font:inherit;color:inherit}
 .chart{background:var(--card);border:2px solid var(--line);border-radius:16px;padding:14px 12px 10px;margin-bottom:14px}
 .chart h2{margin:0 0 4px;font-size:22px}
 .cols{display:flex;gap:8px;height:250px}
-.col{flex:1;min-width:0;display:flex;flex-direction:column}
+.cols.d1{gap:5px;height:300px}
+.cols.d2{gap:4px;height:300px}
+.cols.d3{gap:3px;height:300px}
+.cols.d1 .cn,.cols.d2 .cn,.cols.d3 .cn{writing-mode:vertical-rl;align-self:center;width:auto;height:92px;font-size:11px;line-height:1.2;text-align:start;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
+.cols.d1 .val{font-size:12px}.cols.d1 .col.first .val{font-size:14px}
+.cols.d2 .col:not(.first) .val{writing-mode:vertical-rl;font-size:10px;padding-bottom:3px;line-height:1}
+.cols.d2 .col.first .val,.cols.d3 .col.first .val{font-size:12px}
+.cols.d3 .col:not(.first) .val{display:none}
+.cols.d1 .rk{font-size:17px}.cols.d2 .rk,.cols.d3 .rk{font-size:12px;bottom:4px}
+.cols.d1 .cr,.cols.d2 .cr,.cols.d3 .cr{font-size:18px;margin-bottom:21px}
+.cols.d3 .col.rest .rk{display:none}
+.col{flex:1 1 0;min-width:0;display:flex;flex-direction:column}
 .col .track{flex:1;display:flex;align-items:flex-end;border-bottom:2px solid var(--line);padding-top:44px}
 .col .fill{position:relative;width:100%;height:0;border-radius:10px 10px 0 0;background:var(--ok);transition:height .9s cubic-bezier(.2,.8,.2,1)}
 .col.first .fill{background:linear-gradient(180deg,#f2c14e,#c98f00)}
@@ -149,13 +160,20 @@ button,input,textarea{font:inherit;color:inherit}
   <section class="form" id="formCard" hidden>
     <h2 id="formTitle">Menu baru</h2>
     <label class="f"><span>Nama masakan</span><input type="text" id="mName" maxlength="40" placeholder="contoh: Rendang sapi"></label>
-    <label class="f"><span class="sc"><span>Nilai</span><output id="mOut">8.0</output></span><input type="range" id="mScore" min="1" max="10" step="0.5" value="8"></label>
+    <label class="f"><span>Nilai (0 sampai 10, boleh desimal)</span><input type="text" id="mScore" inputmode="decimal" placeholder="contoh: 9.5" autocomplete="off"></label>
     <label class="f"><span>Komentar (boleh kosong)</span><textarea id="mNote" maxlength="120" placeholder="contoh: bumbunya meresap banget"></textarea></label>
     <div class="f"><span>Foto masakan (boleh kosong)</span>
       <div class="pic"><img id="mPrev" alt="" hidden><button type="button" class="btn ghost sm" id="mPicBtn">Pilih foto</button></div>
       <input class="vh" id="mFile" type="file" accept="image/*" aria-label="Pilih foto masakan">
     </div>
     <div class="btns"><button class="btn" id="saveBtn">Tambah menu</button><button class="btn ghost" id="cancelBtn" hidden>Batal</button></div>
+  </section>
+
+  <section class="form" id="bulkCard" hidden>
+    <h2>Tambah banyak sekaligus</h2>
+    <label class="f"><span>Satu menu per baris: nama, lalu nilai</span><textarea id="bulkText" rows="6" placeholder="Rendang sapi, 9.5&#10;Ayam bakar madu 8.5&#10;Sayur asem - 7"></textarea></label>
+    <p id="bulkMsg" style="font-size:13px;margin:0 0 10px;color:var(--mute)" hidden></p>
+    <button class="btn" id="bulkBtn">Masukkan semua</button>
   </section>
 
   <h2 style="font-size:26px;margin:0 0 10px">Peringkat</h2>
@@ -202,7 +220,13 @@ button,input,textarea{font:inherit;color:inherit}
   function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
   function ranked(){return S.menus.slice().sort(function(a,b){return b.score-a.score||a.created-b.created})}
   function champ(){var r=ranked();return r[0]||null}
-  function fmt(n){return Number(n).toFixed(1)}
+  function fmt(n){var r=Math.round(Number(n)*100)/100;return Number.isInteger(r)?r.toFixed(1):String(r)}
+  function parseScore(v){
+    var t=String(v).trim().replace(',','.');
+    if(!/^\d+(\.\d+)?$/.test(t))return null;
+    var n=parseFloat(t);
+    return (n>=0&&n<=10)?n:null;
+  }
   function dayStr(ts){return new Date(ts).toLocaleDateString('id-ID',{day:'numeric',month:'short'})}
   function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
   function norm(d){
@@ -306,13 +330,15 @@ button,input,textarea{font:inherit;color:inherit}
   }
   function renderChart(){
     var c=$('chart');c.textContent='';
-    var r=ranked().slice(0,6);
+    var r=ranked();
     if(loading||!r.length){c.hidden=true;return}
     c.hidden=false;
-    c.appendChild(el('h2','','Papan peringkat'));
-    var cols=el('div','cols');
+    c.appendChild(el('h2','','Papan peringkat ('+r.length+' menu)'));
+    var n=r.length;
+    var cols=el('div','cols '+(n<=6?'d0':(n<=12?'d1':(n<=18?'d2':'d3'))));
     r.forEach(function(m,i){
-      var col=el('div','col'+(i===0?' first':''));
+      var col=el('div','col'+(i===0?' first':'')+(i>2?' rest':''));
+      col.title=m.name+' ('+fmt(m.score)+')';
       var track=el('div','track');
       var fill=el('div','fill');
       if(i===0)fill.appendChild(el('div','cr','\uD83D\uDC51'));
@@ -382,6 +408,7 @@ button,input,textarea{font:inherit;color:inherit}
   function renderControls(){
     var w=canWrite();
     $('formCard').hidden=!w;
+    $('bulkCard').hidden=!w;
     $('syncCard').hidden=!(w&&dirty);
     var f=$('foot');f.textContent='';
     var b=el('button','',w?'Mode pemilik aktif. Keluar':'Masuk pemilik');
@@ -418,14 +445,14 @@ button,input,textarea{font:inherit;color:inherit}
   /* ---------- form ---------- */
   function resetForm(){
     editId=null;mPhoto=null;
-    $('mName').value='';$('mNote').value='';$('mScore').value=8;$('mOut').textContent='8.0';
+    $('mName').value='';$('mNote').value='';$('mScore').value='';
     $('mPrev').hidden=true;$('formTitle').textContent='Menu baru';
     $('saveBtn').textContent='Tambah menu';$('cancelBtn').hidden=true;
   }
   function startEdit(id){
     var m=S.menus.filter(function(x){return x.id===id})[0];if(!m)return;
     editId=id;mPhoto=m.photo;
-    $('mName').value=m.name;$('mNote').value=m.note||'';$('mScore').value=m.score;$('mOut').textContent=fmt(m.score);
+    $('mName').value=m.name;$('mNote').value=m.note||'';$('mScore').value=String(m.score);
     if(m.photo){$('mPrev').src=m.photo;$('mPrev').hidden=false}else{$('mPrev').hidden=true}
     $('formTitle').textContent='Ubah menu';$('saveBtn').textContent='Simpan perubahan';$('cancelBtn').hidden=false;
     $('formCard').scrollIntoView({behavior:'smooth',block:'start'});$('mName').focus();
@@ -440,7 +467,6 @@ button,input,textarea{font:inherit;color:inherit}
       afterChange(prev);
     });
   }
-  $('mScore').oninput=function(){$('mOut').textContent=fmt(this.value)};
   $('mPicBtn').onclick=function(){$('mFile').click()};
   $('mFile').onchange=function(){
     var f=this.files[0];if(!f)return;
@@ -451,7 +477,9 @@ button,input,textarea{font:inherit;color:inherit}
     if(!canWrite())return;
     var name=$('mName').value.trim();
     if(!name){$('mName').focus();toast('Isi nama masakan dulu.');return}
-    var score=parseFloat($('mScore').value),note=$('mNote').value.trim();
+    var score=parseScore($('mScore').value),note=$('mNote').value.trim();
+    if(score===null){$('mScore').focus();toast('Isi nilai dengan angka 0 sampai 10, contoh 9.5.');return}
+    var wasEdit=!!editId;
     var prev=champ();
     if(editId){
       var m=S.menus.filter(function(x){return x.id===editId})[0];
@@ -460,8 +488,29 @@ button,input,textarea{font:inherit;color:inherit}
       S.menus.push({id:uid(),name:name,score:score,note:note,photo:mPhoto,created:Date.now()});
     }
     resetForm();afterChange(prev);
+    if(!wasEdit)$('mName').focus();
   };
   $('cancelBtn').onclick=resetForm;
+
+  /* ---------- tambah banyak sekaligus ---------- */
+  function showBulk(msg){var p=$('bulkMsg');p.textContent=msg;p.hidden=false}
+  $('bulkBtn').onclick=function(){
+    if(!canWrite())return;
+    var ok=[],bad=[];
+    $('bulkText').value.split('\n').forEach(function(raw){
+      var ln=raw.trim();if(!ln)return;
+      var m=ln.match(/^(.*?)[\s,;:=\-\u2013]+(\d+(?:[.,]\d+)?)$/);
+      var sc=m?parseScore(m[2]):null;
+      var name=m?m[1].trim().replace(/[\s,;:=\-\u2013]+$/,''):'';
+      if(!m||sc===null||!name)bad.push(ln);else ok.push({name:name.slice(0,40),score:sc});
+    });
+    if(!ok.length){showBulk(bad.length?'Belum ada baris yang terbaca. Pakai format: nama, nilai (contoh: Rendang sapi, 9.5). Nilai harus 0 sampai 10.':'Isi dulu daftar menunya.');return}
+    var prev=champ(),t=Date.now();
+    ok.forEach(function(x,i){S.menus.push({id:uid(),name:x.name,score:x.score,note:'',photo:null,created:t+i})});
+    $('bulkText').value=bad.join('\n');
+    showBulk(ok.length+' menu masuk.'+(bad.length?' '+bad.length+' baris dilewati (nilai kosong atau di luar 0 sampai 10), masih ada di kotak untuk dibetulkan.':''));
+    afterChange(prev);
+  };
 
   /* ---------- istri ---------- */
   $('avatarBtn').onclick=function(){if(canWrite())$('avatarFile').click()};
