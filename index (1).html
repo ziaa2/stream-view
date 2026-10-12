@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f0f18">
+<title>Watch Vid</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0f0f18;
+    --surface: #181825;
+    --surface-2: #222235;
+    --line: #2d2d44;
+    --text: #edecf7;
+    --muted: #9c9bb5;
+    --accent: #b8acff;
+    --accent-ink: #1a1530;
+    --radius-lg: 22px;
+    --radius-md: 14px;
+    --font-head: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+    --font-body: "Figtree", "Segoe UI", system-ui, sans-serif;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  html { scroll-padding-top: calc(env(safe-area-inset-top, 0px) + 76px); }
+  *, *::before, *::after { box-sizing: inherit; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; padding: 0; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  /* Warna cadangan untuk thumbnail, dibuat dari satu angka warna (--h) */
+  .art {
+    background:
+      radial-gradient(60% 80% at 18% 12%, hsl(var(--h) 80% 64% / .9), transparent 62%),
+      radial-gradient(75% 95% at 92% 100%, hsl(calc(var(--h) + 55) 70% 48% / .85), transparent 66%),
+      linear-gradient(160deg, hsl(var(--h) 45% 24%), hsl(calc(var(--h) + 30) 55% 12%));
+  }
+
+  .wrap { width: 100%; max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+
+  /* Bilah atas */
+  .bar {
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    z-index: 20;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--line);
+  }
+  .bar .wrap { display: flex; align-items: center; gap: 12px; padding-top: 12px; padding-bottom: 12px; }
+  .brand { display: flex; align-items: center; gap: 9px; font-family: var(--font-head); font-weight: 800; font-size: 22px; letter-spacing: -.02em; white-space: nowrap; }
+  .brand-mark { width: 30px; height: 30px; border-radius: 9px; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; }
+  .search { position: relative; flex: 1; min-width: 0; }
+  .search svg { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+  .search input {
+    width: 100%; height: 42px;
+    padding: 0 14px 0 40px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--text);
+    font: inherit; font-size: 15px;
+  }
+  .search input::placeholder { color: var(--muted); }
+  .search input:focus-visible { outline-offset: 1px; }
+
+  /* Kategori */
+  .chips { display: flex; gap: 8px; overflow-x: auto; padding: 16px 16px 4px; scrollbar-width: none; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip {
+    flex: none;
+    padding: 8px 16px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--muted);
+    font-size: 14px; font-weight: 500;
+    transition: background .15s, color .15s, border-color .15s;
+  }
+  .chip:hover { color: var(--text); border-color: #43435f; }
+  .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+
+  /* Label Watch Vid di setiap video */
+  .wv {
+    position: absolute; top: 8px; left: 8px; z-index: 3;
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 9px 3px 7px;
+    border-radius: 999px;
+    background: rgba(10,10,18,.62);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,.14);
+    font-size: 11.5px; font-weight: 600; line-height: 1.4; color: #fff;
+    pointer-events: none;
+  }
+  .wv svg { color: var(--accent); }
+  .wv-lg { top: 14px; left: 14px; font-size: 13px; padding: 4px 11px 4px 9px; }
+
+  /* Gambar sampul otomatis dari video */
+  .tbox { position: absolute; inset: 0; z-index: 0; }
+  .tbox video, .tbox img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0; transition: opacity .4s ease; pointer-events: none; }
+  .tbox video.ready, .tbox img.ready { opacity: 1; }
+
+  /* Sorotan */
+  .hero { position: relative; margin-top: 20px; isolation: isolate; }
+  .hero-glow { position: absolute; inset: 14% 4% -10%; z-index: -1; filter: blur(48px); opacity: .55; border-radius: 50%; }
+  .hero-card {
+    display: block; width: 100%;
+    position: relative;
+    aspect-ratio: 16 / 10;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    text-align: left;
+    border: 1px solid rgba(255,255,255,.08);
+    animation: masuk .7s cubic-bezier(.2,.7,.2,1) both;
+  }
+  .hero-card::after { content: ""; position: absolute; inset: 0; z-index: 1; background: linear-gradient(to top, rgba(10,10,18,.9) 0%, rgba(10,10,18,.25) 55%, transparent 100%); }
+  .hero-body { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; padding: 20px; display: grid; gap: 6px; }
+  .hero-tag { font-size: 13px; color: rgba(255,255,255,.8); font-weight: 500; }
+  .hero-title { font-family: var(--font-head); font-weight: 800; font-size: clamp(24px, 5.6vw, 44px); line-height: 1.05; letter-spacing: -.025em; margin: 0; max-width: 20ch; text-wrap: balance; }
+  .hero-meta { font-size: 14px; color: rgba(255,255,255,.78); }
+  .play-pill { margin-top: 10px; justify-self: start; display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 20px 0 16px; border-radius: 999px; background: #fff; color: #12101c; font-weight: 600; font-size: 15px; }
+  @keyframes masuk { from { opacity: 0; transform: scale(.985); } to { opacity: 1; transform: none; } }
+
+  /* Judul bagian */
+  .section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 32px 0 14px; flex-wrap: wrap; }
+  .section-head h2 { font-family: var(--font-head); font-size: 22px; font-weight: 700; letter-spacing: -.015em; margin: 0; }
+  .tools { display: flex; align-items: center; gap: 12px; }
+  .count { color: var(--muted); font-size: 14px; }
+  .sort { height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit; font-size: 14px; }
+
+  /* Kisi video */
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 12px; padding-bottom: 56px; }
+  .card { text-align: left; display: block; width: 100%; }
+  .thumb {
+    position: relative;
+    aspect-ratio: 16 / 10;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,.07);
+    transition: transform .2s ease, border-color .2s ease;
+  }
+  .card:hover .thumb { transform: translateY(-3px); border-color: rgba(255,255,255,.22); }
+  .glyph {
+    position: absolute; left: 50%; top: 50%; z-index: 2;
+    width: 44px; height: 44px; margin: -22px 0 0 -22px;
+    display: grid; place-items: center;
+    border-radius: 50%;
+    background: rgba(12,12,20,.45);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,.25);
+    color: #fff;
+  }
+  .dur { position: absolute; right: 8px; bottom: 8px; z-index: 2; padding: 2px 8px; border-radius: 8px; background: rgba(10,10,18,.72); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .dur:empty { display: none; }
+  .prog { position: absolute; left: 0; bottom: 0; height: 3px; z-index: 3; background: var(--accent); border-radius: 0 3px 3px 0; }
+  .card h3 { margin: 10px 2px 2px; font-size: 15px; font-weight: 600; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .card p { margin: 0 2px; color: var(--muted); font-size: 13px; }
+
+  .empty { grid-column: 1 / -1; text-align: center; padding: 56px 12px; color: var(--muted); }
+  .empty strong { display: block; color: var(--text); font-family: var(--font-head); font-size: 20px; margin-bottom: 6px; }
+  .empty span { display: block; max-width: 44ch; margin: 0 auto; }
+
+  /* Pemutar */
+  .modal {
+    position: fixed; inset: 0; z-index: 50;
+    display: none; align-items: center; justify-content: center;
+    padding: calc(env(safe-area-inset-top, 0px) + 12px) 12px calc(env(safe-area-inset-bottom, 0px) + 12px);
+    background: rgba(8,8,14,.84);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  .modal.open { display: flex; }
+  .sheet { position: relative; width: 100%; max-width: 860px; max-height: 100%; overflow-y: auto; isolation: isolate; padding-bottom: 8px; }
+  .sheet-glow { position: absolute; inset: 4% 2% 55%; z-index: -1; filter: blur(60px); opacity: .6; border-radius: 50%; }
+  .player { position: relative; aspect-ratio: 16 / 9; border-radius: var(--radius-md); overflow: hidden; background: #000; border: 1px solid rgba(255,255,255,.1); }
+  .player video { width: 100%; height: 100%; display: block; background: #000; }
+  .player .wv { top: 10px; left: 10px; opacity: .9; }
+  .player-fallback { position: absolute; inset: 0; z-index: 2; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 20px; text-align: center; }
+  .player-fallback.show { display: flex; }
+  .player-fallback strong { font-family: var(--font-head); font-size: 18px; }
+  .player-fallback span { color: rgba(255,255,255,.78); font-size: 14px; max-width: 36ch; }
+  /* Indikator memuat, gestur ketuk dua kali, dan tombol tambahan di pemutar */
+  .buffer { position: absolute; inset: 0; z-index: 1; display: none; align-items: center; justify-content: center; pointer-events: none; }
+  .player.loading .buffer { display: flex; }
+  .spinner { width: 42px; height: 42px; border-radius: 50%; border: 3px solid rgba(255,255,255,.22); border-top-color: #fff; animation: putar .8s linear infinite; }
+  @keyframes putar { to { transform: rotate(360deg); } }
+  .tap { position: absolute; left: 0; right: 0; top: 0; bottom: 56px; z-index: 2; }
+  .fx { position: absolute; top: 50%; z-index: 4; transform: translateY(-50%); padding: 10px 16px; border-radius: 999px; background: rgba(10,10,18,.72); font-weight: 600; font-size: 14px; opacity: 0; pointer-events: none; }
+  .fx-l { left: 12%; }
+  .fx-r { right: 12%; }
+  .fx.on { animation: fxanim .6s ease; }
+  @keyframes fxanim { 0% { opacity: 0; transform: translateY(-50%) scale(.9); } 20% { opacity: 1; transform: translateY(-50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }
+  .pbtns { position: absolute; top: 10px; right: 10px; z-index: 5; display: flex; gap: 8px; opacity: 0; pointer-events: none; transition: opacity .2s; }
+  .player.ui .pbtns, .player.paused .pbtns { opacity: 1; pointer-events: auto; }
+  .pbtn { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: rgba(10,10,18,.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border: 1px solid rgba(255,255,255,.16); color: #fff; }
+  .player:fullscreen { width: 100vw; height: 100vh; aspect-ratio: auto; border-radius: 0; border: 0; }
+  .player:-webkit-full-screen { width: 100vw; height: 100vh; aspect-ratio: auto; border-radius: 0; border: 0; }
+  .glyph-lg { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; background: rgba(12,12,20,.5); border: 1px solid rgba(255,255,255,.28); margin-bottom: 6px; }
+  .info { padding: 16px 4px 4px; }
+  .info h2 { font-family: var(--font-head); font-size: clamp(22px, 4.4vw, 30px); line-height: 1.1; letter-spacing: -.02em; margin: 0 0 4px; }
+  .info .meta { color: var(--muted); font-size: 14px; margin: 0 0 4px; }
+  .info .resume { color: var(--accent); font-size: 13px; margin: 0 0 4px; }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+  .btn { height: 44px; padding: 0 18px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface-2); font-weight: 600; font-size: 15px; display: inline-flex; align-items: center; gap: 8px; }
+  .btn:hover { border-color: #4a4a6a; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+
+  .rek { padding: 4px 4px 8px; }
+  .rek-title { font-family: var(--font-head); font-size: 18px; font-weight: 700; letter-spacing: -.01em; margin: 24px 0 12px; }
+  .rek-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 12px; }
+
+  .toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 24px); transform: translateX(-50%) translateY(20px); z-index: 60; padding: 10px 18px; border-radius: 999px; background: #fff; color: #12101c; font-weight: 600; font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
+  .toast.show { opacity: 1; transform: translateX(-50%); }
+
+  @media (min-width: 640px) {
+    .wrap { padding: 0 24px; }
+    .chips { padding-left: 24px; padding-right: 24px; }
+    .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px 16px; }
+    .hero-card { aspect-ratio: 21 / 9; }
+    .hero-body { padding: 32px; }
+    .wv-lg { top: 20px; left: 24px; }
+  }
+  @media (min-width: 960px) {
+    .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="wrap">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.4-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z"/></svg></span>
+      Watch Vid
+    </div>
+    <label class="search">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Cari judul video" aria-label="Cari judul video" autocomplete="off">
+    </label>
+  </div>
+</header>
+
+<nav class="chips" id="chips" aria-label="Kategori" hidden></nav>
+
+<main class="wrap">
+  <section class="hero" id="hero" hidden></section>
+
+  <div class="section-head">
+    <h2 id="judulDaftar">Semua video</h2>
+    <div class="tools">
+      <span class="count" id="jumlah"></span>
+      <select id="sort" class="sort" aria-label="Urutkan video">
+        <option value="terbaru">Terbaru</option>
+        <option value="terlama">Terlama</option>
+        <option value="acak">Acak</option>
+      </select>
+    </div>
+  </div>
+  <div class="grid" id="grid"></div>
+</main>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="mJudul">
+  <div class="sheet" id="sheet">
+    <div class="sheet-glow art" id="mGlow"></div>
+    <div class="player art" id="mPlayer">
+      <video id="mVideo" controls controlsList="nofullscreen" playsinline preload="auto"></video>
+      <span class="wv" aria-hidden="true"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.4-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z"/></svg>Watch Vid</span>
+      <div class="player-fallback" id="mFallback">
+        <div class="glyph-lg"><svg width="26" height="26" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.4-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z"/></svg></div>
+        <strong>Video tidak bisa diputar</strong>
+        <span>Link videonya mungkin sudah mati atau bukan link langsung ke file video.</span>
+      </div>
+      <div class="buffer" aria-hidden="true"><span class="spinner"></span></div>
+      <div class="tap" id="mTap"></div>
+      <div class="fx fx-l" id="fxL" aria-hidden="true">−10 dtk</div>
+      <div class="fx fx-r" id="fxR" aria-hidden="true">+10 dtk</div>
+      <div class="pbtns">
+        <button class="pbtn" id="mMundur" type="button" aria-label="Mundur 10 detik"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4v5h5"/><path d="M3.5 9A9 9 0 1 1 3 12.5"/><text x="12" y="15.5" text-anchor="middle" font-size="7.5" font-weight="700" fill="currentColor" stroke="none" font-family="sans-serif">10</text></svg></button>
+        <button class="pbtn" id="mMaju" type="button" aria-label="Maju 10 detik"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 4v5h-5"/><path d="M20.5 9A9 9 0 1 0 21 12.5"/><text x="12" y="15.5" text-anchor="middle" font-size="7.5" font-weight="700" fill="currentColor" stroke="none" font-family="sans-serif">10</text></svg></button>
+        <button class="pbtn" id="mFull" type="button" aria-label="Layar penuh"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
+      </div>
+    </div>
+    <div class="info">
+      <h2 id="mJudul"></h2>
+      <p class="meta" id="mMeta" hidden></p>
+      <p class="resume" id="mResume" hidden></p>
+      <div class="actions">
+        <button class="btn" id="mBagikan" type="button">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>
+          Bagikan
+        </button>
+        <button class="btn primary" id="mTutup" type="button">Tutup</button>
+      </div>
+    </div>
+    <div class="rek" id="rekWrap" hidden>
+      <h3 class="rek-title">Tonton juga</h3>
+      <div class="rek-grid" id="rek"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+  /* Daftar video dibaca dari videos.json (satu folder dengan file ini). */
+  const LS_KEY = "watchvid:posisi";
+  let VIDEOS = [];
+  const state = { kat: "Semua", q: "", sort: "terbaru", acak: null };
+
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const byId = (id) => VIDEOS.find((v) => v.id === id);
+  const tglFmt = (s) => {
+    const d = new Date(s + "T00:00:00");
+    return isNaN(d) ? s : d.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+  };
+  const fmt = (s) => {
+    if (!isFinite(s) || s <= 0) return "";
+    s = Math.round(s);
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), d = s % 60;
+    return h ? `${h}:${String(m).padStart(2, "0")}:${String(d).padStart(2, "0")}` : `${m}:${String(d).padStart(2, "0")}`;
+  };
+  const playIcon = (n) => `<svg width="${n}" height="${n}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.4-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z"/></svg>`;
+  const label = (extra) => `<span class="wv ${extra || ""}">${playIcon(extra ? 12 : 11)}Watch Vid</span>`;
+  function shuffle(a) {
+    a = a.slice();
+    for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+    return a;
+  }
+  function hueOf(s) { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h % 360; }
+
+  /* Posisi terakhir menonton (disimpan di perangkat masing-masing) */
+  function loadPos() { try { return JSON.parse(localStorage.getItem(LS_KEY) || "{}"); } catch (e) { return {}; } }
+  function savePos() { try { localStorage.setItem(LS_KEY, JSON.stringify(POS)); } catch (e) {} }
+  let POS = loadPos();
+
+  /* Cache kecil di perangkat: gambar sampul dan durasi, supaya muncul instan di kunjungan berikutnya */
+  const TH_KEY = "watchvid:thumbs", DUR_KEY = "watchvid:dur";
+  function jsonLS(key) { try { return JSON.parse(localStorage.getItem(key) || "{}"); } catch (e) { return {}; } }
+  const THUMBS = new Map(Object.entries(jsonLS(TH_KEY)));
+  const DURS = jsonLS(DUR_KEY);
+  let simpanT = 0;
+  function simpanCache() {
+    clearTimeout(simpanT);
+    simpanT = setTimeout(() => {
+      try { localStorage.setItem(DUR_KEY, JSON.stringify(DURS)); } catch (e) {}
+      try { localStorage.setItem(TH_KEY, JSON.stringify(Object.fromEntries([...THUMBS.entries()].slice(-40)))); } catch (e) {}
+    }, 1500);
+  }
+  function progress(v) {
+    const r = POS[v.id];
+    if (!r || !r.d) return 0;
+    const f = r.t / r.d;
+    return f > 0.02 && f < 0.97 ? Math.round(f * 100) : 0;
+  }
+  function updateProg() {
+    document.querySelectorAll(".card[data-open]").forEach((el) => {
+      const v = byId(el.dataset.open);
+      const thumb = el.querySelector(".thumb");
+      if (!v || !thumb) return;
+      let b = thumb.querySelector(".prog");
+      const p = progress(v);
+      if (p) {
+        if (!b) { b = document.createElement("span"); b.className = "prog"; thumb.appendChild(b); }
+        b.style.width = p + "%";
+      } else if (b) b.remove();
+    });
+  }
+
+  function prep(list) {
+    return list.filter((v) => v && v.url).map((v, i) => ({
+      id: String(v.id !== undefined && v.id !== null ? v.id : i + 1),
+      judul: v.judul || ("Video " + (i + 1)),
+      url: v.url,
+      kat: v.kat || "",
+      tgl: v.tgl || "",
+      ord: i,
+      t: v.tgl ? (Date.parse(v.tgl) || 0) : 0,
+      hue: hueOf(v.judul || v.url),
+      dur: DURS[v.url] || 0
+    }));
+  }
+
+  /* Gambar sampul otomatis: ambil satu frame dari video dan lewati frame yang gelap.
+     Kalau server mengizinkan, frame disimpan jadi gambar kecil (hemat koneksi). */
+  function setDur(v) {
+    DURS[v.url] = v.dur;
+    simpanCache();
+    document.querySelectorAll("[data-dur]").forEach((el) => { if (el.dataset.dur === v.id) el.textContent = fmt(v.dur); });
+  }
+  function pasangGambar(box, src) {
+    const i = new Image();
+    i.alt = "";
+    i.decoding = "async";
+    i.addEventListener("load", () => i.classList.add("ready"));
+    i.src = src;
+    box.appendChild(i);
+  }
+
+  function muatFrame(box, v, anon, selesai) {
+    const vid = document.createElement("video");
+    if (anon) vid.crossOrigin = "anonymous";
+    vid.muted = true;
+    vid.playsInline = true;
+    vid.preload = "metadata";
+    vid.tabIndex = -1;
+    vid.setAttribute("aria-hidden", "true");
+    let targets = [], tries = 0, beres = false;
+
+    const finalkan = (bisaBaca) => {
+      if (beres) return;
+      beres = true;
+      if (bisaBaca) {
+        try {
+          const w = 360, h = 225, c = document.createElement("canvas");
+          c.width = w; c.height = h;
+          const x = c.getContext("2d");
+          const vw = vid.videoWidth || w, vh = vid.videoHeight || h;
+          const sk = Math.max(w / vw, h / vh), sw = w / sk, sh = h / sk;
+          x.drawImage(vid, (vw - sw) / 2, (vh - sh) / 2, sw, sh, 0, 0, w, h);
+          const url = c.toDataURL("image/jpeg", 0.72);
+          THUMBS.set(v.url, url);
+          simpanCache();
+          vid.remove();
+          vid.removeAttribute("src");
+          vid.load();
+          pasangGambar(box, url);
+          return selesai();
+        } catch (e) {}
+      }
+      vid.classList.add("ready");
+      selesai();
+    };
+
+    vid.addEventListener("loadedmetadata", () => {
+      const d = vid.duration;
+      if (isFinite(d) && d > 0) {
+        v.dur = d; setDur(v);
+        targets = [0.1, 0.3, 0.55, 0.8].map((p) => Math.min(Math.max(p * d, 0.5), Math.max(d - 0.3, 0)));
+      } else {
+        targets = [0.5];
+      }
+      try { vid.currentTime = targets[0]; } catch (e) { finalkan(false); }
+      setTimeout(() => { if (!beres && vid.readyState >= 2) finalkan(false); }, 3500);
+    });
+    vid.addEventListener("seeked", () => {
+      if (!targets.length || beres) return;
+      let gelap = false, bisaBaca = true;
+      try {
+        const c = document.createElement("canvas");
+        c.width = c.height = 16;
+        const x = c.getContext("2d");
+        x.drawImage(vid, 0, 0, 16, 16);
+        const px = x.getImageData(0, 0, 16, 16).data;
+        let sum = 0;
+        for (let i = 0; i < px.length; i += 4) sum += px[i] * 0.299 + px[i + 1] * 0.587 + px[i + 2] * 0.114;
+        gelap = sum / (px.length / 4) < 18;
+      } catch (e) { bisaBaca = false; }
+      if (gelap && tries < targets.length - 1) { tries++; vid.currentTime = targets[tries]; }
+      else finalkan(bisaBaca);
+    });
+    vid.addEventListener("error", () => {
+      if (beres) return;
+      beres = true;
+      vid.remove();
+      if (anon) muatFrame(box, v, false, selesai);
+      else { box.classList.add("mati"); selesai(); }
+    });
+    vid.src = v.url + "#t=0.1";
+    box.appendChild(vid);
+  }
+
+  function mountThumb(box, v) {
+    return new Promise((resolve) => {
+      if (box.dataset.done) return resolve();
+      box.dataset.done = "1";
+      const cached = THUMBS.get(v.url);
+      if (cached) { pasangGambar(box, cached); return resolve(); }
+      const guard = setTimeout(resolve, 8000);
+      muatFrame(box, v, true, () => { clearTimeout(guard); resolve(); });
+    });
+  }
+
+  /* Antrean: maksimal 3 gambar sampul dimuat bersamaan, dan berhenti sementara saat video dibuka
+     supaya video yang diputar tidak berebut koneksi. */
+  const antre = [];
+  let jalan = 0, jeda = false;
+  const MAKS = 3;
+  function pump() {
+    while (!jeda && jalan < MAKS && antre.length) {
+      const it = antre.shift();
+      if (!it.box.isConnected) continue;
+      jalan++;
+      mountThumb(it.box, it.v).then(() => { jalan--; pump(); });
+    }
+  }
+  function antriThumb(box, v) {
+    if (box.dataset.done || box.dataset.q) return;
+    if (THUMBS.has(v.url)) { mountThumb(box, v); return; }
+    box.dataset.q = "1";
+    if (box.dataset.prio) antre.unshift({ box, v }); else antre.push({ box, v });
+    pump();
+  }
+  function jedaThumb(b) { jeda = b; if (!b) pump(); }
+
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e) => {
+      if (!e.isIntersecting) return;
+      io.unobserve(e.target);
+      const v = byId(e.target.dataset.vid);
+      if (v) antriThumb(e.target, v);
+    });
+  }, { rootMargin: "250px" });
+  const observeThumbs = (root) => root.querySelectorAll(".tbox[data-vid]").forEach((b) => io.observe(b));
+
+  /* Tampilan */
+  function cardHTML(v) {
+    const p = progress(v);
+    const meta = [v.kat, v.tgl && tglFmt(v.tgl)].filter(Boolean).join(", ");
+    return `
+      <button class="card" type="button" data-open="${esc(v.id)}" aria-label="Putar ${esc(v.judul)}">
+        <div class="thumb art" style="--h:${v.hue}">
+          <div class="tbox" data-vid="${esc(v.id)}"></div>
+          ${label()}
+          <span class="glyph">${playIcon(18)}</span>
+          <span class="dur" data-dur="${esc(v.id)}">${fmt(v.dur)}</span>
+          ${p ? `<span class="prog" style="width:${p}%"></span>` : ""}
+        </div>
+        <h3>${esc(v.judul)}</h3>
+        ${meta ? `<p>${esc(meta)}</p>` : ""}
+      </button>`;
+  }
+
+  function renderChips() {
+    const kats = [...new Set(VIDEOS.map((v) => v.kat).filter(Boolean))];
+    if (state.kat !== "Semua" && !kats.includes(state.kat)) state.kat = "Semua";
+    const nav = $("chips");
+    if (!kats.length) { nav.hidden = true; return; }
+    nav.hidden = false;
+    nav.innerHTML = ["Semua", ...kats].map((k) =>
+      `<button class="chip" type="button" data-kat="${esc(k)}" aria-pressed="${k === state.kat}">${esc(k)}</button>`
+    ).join("");
+  }
+
+  function sorted(list) {
+    const a = list.slice();
+    if (state.sort === "acak") {
+      if (!state.acak) state.acak = shuffle(VIDEOS.map((v) => v.id));
+      const idx = new Map(state.acak.map((id, i) => [id, i]));
+      return a.sort((x, y) => idx.get(x.id) - idx.get(y.id));
+    }
+    if (state.sort === "terlama") return a.sort((x, y) => (x.t - y.t) || (x.ord - y.ord));
+    return a.sort((x, y) => (y.t - x.t) || (y.ord - x.ord));
+  }
+
+  function renderHero(v) {
+    const hero = $("hero");
+    if (!v) { hero.hidden = true; hero.innerHTML = ""; return; }
+    hero.hidden = false;
+    const meta = [v.kat, v.tgl && tglFmt(v.tgl)].filter(Boolean).join(", ");
+    hero.innerHTML = `
+      <div class="hero-glow art" style="--h:${v.hue}"></div>
+      <button class="hero-card art" style="--h:${v.hue}" type="button" data-open="${esc(v.id)}" aria-label="Putar ${esc(v.judul)}">
+        <div class="tbox" data-vid="${esc(v.id)}"></div>
+        ${label("wv-lg")}
+        <div class="hero-body">
+          <span class="hero-tag">Terbaru</span>
+          <h1 class="hero-title">${esc(v.judul)}</h1>
+          ${meta ? `<span class="hero-meta">${esc(meta)}</span>` : ""}
+          <span class="play-pill">${playIcon(18)} Putar sekarang</span>
+        </div>
+      </button>`;
+    observeThumbs(hero);
+  }
+
+  function render() {
+    const grid = $("grid");
+    if (!VIDEOS.length) {
+      renderHero(null);
+      $("jumlah").textContent = "";
+      grid.innerHTML = `<div class="empty"><strong>Belum ada video</strong><span>Tambahkan video lewat file videos.json, lalu muat ulang halaman ini.</span></div>`;
+      return;
+    }
+    const q = state.q.trim().toLowerCase();
+    const list = sorted(VIDEOS.filter((v) =>
+      (state.kat === "Semua" || v.kat === state.kat) && (!q || v.judul.toLowerCase().includes(q))
+    ));
+    const showHero = state.sort === "terbaru" && state.kat === "Semua" && !q && list.length >= 3;
+    renderHero(showHero ? list[0] : null);
+    const rest = showHero ? list.slice(1) : list;
+
+    $("judulDaftar").textContent = q ? "Hasil pencarian" : (state.kat === "Semua" ? "Semua video" : state.kat);
+    $("jumlah").textContent = rest.length + " video";
+
+    if (!rest.length) {
+      grid.innerHTML = `<div class="empty"><strong>Video tidak ditemukan</strong><span>Coba kata kunci lain atau pilih kategori Semua.</span></div>`;
+      return;
+    }
+    grid.innerHTML = rest.map(cardHTML).join("");
+    observeThumbs(grid);
+  }
+
+  /* Pemutar */
+  let aktif = null, pemicu = null, pushed = false, modalOpen = false, saveT = 0, resumeAt = 0, jedaT = 0, uiT = 0;
+
+  function renderRek(v) {
+    const lain = VIDEOS.filter((x) => x.id !== v.id);
+    const sama = shuffle(lain.filter((x) => x.kat && x.kat === v.kat));
+    const beda = shuffle(lain.filter((x) => !(x.kat && x.kat === v.kat)));
+    const pilih = sama.concat(beda).slice(0, 2);
+    $("rekWrap").hidden = !pilih.length;
+    $("rek").innerHTML = pilih.map(cardHTML).join("");
+    $("rek").querySelectorAll(".tbox[data-vid]").forEach((b) => { b.dataset.prio = "1"; });
+    observeThumbs($("rek"));
+  }
+
+  function bukaUI(v) {
+    aktif = v;
+    const vid = $("mVideo");
+    $("mPlayer").style.setProperty("--h", v.hue);
+    $("mGlow").style.setProperty("--h", v.hue);
+    $("mJudul").textContent = v.judul;
+    const meta = [v.kat, v.tgl && tglFmt(v.tgl)].filter(Boolean).join(", ");
+    $("mMeta").textContent = meta;
+    $("mMeta").hidden = !meta;
+    $("mFallback").classList.remove("show");
+    vid.style.display = "block";
+
+    const r = POS[v.id];
+    resumeAt = (r && r.d && r.t / r.d > 0.02 && r.t / r.d < 0.97) ? r.t : 0;
+    $("mResume").textContent = resumeAt ? "Dilanjutkan dari menit " + fmt(resumeAt) : "";
+    $("mResume").hidden = !resumeAt;
+
+    renderRek(v);
+    const first = !modalOpen;
+    modalOpen = true;
+    $("modal").classList.add("open");
+    document.body.style.overflow = "hidden";
+    $("sheet").scrollTop = 0;
+
+    const pu = THUMBS.get(v.url);
+    if (pu) vid.poster = pu; else vid.removeAttribute("poster");
+    const pl = $("mPlayer");
+    pl.classList.add("loading");
+    pl.classList.remove("paused");
+    jedaThumb(true);
+    clearTimeout(jedaT);
+    jedaT = setTimeout(() => jedaThumb(false), 8000);
+
+    vid.src = v.url;
+    const p = vid.play();
+    if (p && p.catch) p.catch(() => {});
+    if (first) $("mTutup").focus();
+  }
+
+  function simpanSekarang() {
+    const vid = $("mVideo");
+    if (aktif && vid.duration && isFinite(vid.duration) && vid.currentTime > 0) {
+      POS[aktif.id] = { t: vid.currentTime, d: vid.duration };
+      savePos();
+    }
+  }
+
+  function tutupUI() {
+    if (!modalOpen) return;
+    simpanSekarang();
+    modalOpen = false;
+    const vid = $("mVideo");
+    vid.pause();
+    vid.removeAttribute("src");
+    vid.load();
+    $("modal").classList.remove("open");
+    document.body.style.overflow = "";
+    aktif = null;
+    vid.removeAttribute("poster");
+    jedaThumb(false);
+    clearTimeout(jedaT);
+    $("mPlayer").classList.remove("loading", "paused", "ui");
+    if (document.fullscreenElement || document.webkitFullscreenElement) {
+      try { (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch (e) {}
+    }
+    updateProg();
+    if (pemicu && document.contains(pemicu)) pemicu.focus();
+  }
+
+  function idDariHash() {
+    const m = location.hash.match(/^#v=(.+)$/);
+    return m ? decodeURIComponent(m[1]) : null;
+  }
+  function buka(id, el) {
+    const v = byId(id);
+    if (!v) return;
+    if (!modalOpen) {
+      pemicu = el || null;
+      history.pushState({ v: id }, "", "#v=" + encodeURIComponent(id));
+      pushed = true;
+    } else {
+      history.replaceState({ v: id }, "", "#v=" + encodeURIComponent(id));
+    }
+    bukaUI(v);
+  }
+  function tutup() {
+    if (pushed) { pushed = false; history.back(); }
+    else { tutupUI(); history.replaceState(null, "", location.pathname + location.search); }
+  }
+  window.addEventListener("popstate", () => {
+    const id = idDariHash();
+    if (id && byId(id)) { if (!modalOpen) pushed = true; bukaUI(byId(id)); }
+    else { pushed = false; tutupUI(); }
+  });
+
+  const mv = $("mVideo");
+  mv.addEventListener("loadedmetadata", () => {
+    if (aktif && isFinite(mv.duration) && mv.duration > 0 && !aktif.dur) { aktif.dur = mv.duration; setDur(aktif); }
+    if (resumeAt && mv.duration && resumeAt < mv.duration - 1) { try { mv.currentTime = resumeAt; } catch (e) {} }
+    resumeAt = 0;
+  });
+  mv.addEventListener("timeupdate", () => {
+    if (Date.now() - saveT > 2000) { saveT = Date.now(); simpanSekarang(); }
+  });
+  mv.addEventListener("pause", () => { if (modalOpen) simpanSekarang(); });
+  mv.addEventListener("ended", () => {
+    if (!aktif) return;
+    delete POS[aktif.id];
+    savePos();
+    updateProg();
+  });
+  mv.addEventListener("error", () => {
+    if (!modalOpen) return;
+    mv.style.display = "none";
+    $("mPlayer").classList.remove("loading");
+    jedaThumb(false);
+    $("mFallback").classList.add("show");
+  });
+
+  /* Indikator memuat dan status putar */
+  const pl = $("mPlayer");
+  mv.addEventListener("playing", () => { pl.classList.remove("loading"); clearTimeout(jedaT); jedaThumb(false); });
+  mv.addEventListener("canplay", () => pl.classList.remove("loading"));
+  mv.addEventListener("loadeddata", () => pl.classList.remove("loading"));
+  mv.addEventListener("waiting", () => { if (modalOpen) pl.classList.add("loading"); });
+  mv.addEventListener("play", () => pl.classList.remove("paused"));
+  mv.addEventListener("pause", () => { if (modalOpen) pl.classList.add("paused"); });
+
+  /* Kontrol tambahan: mundur/maju 10 detik, ketuk dua kali, layar penuh */
+  function tampilUI() {
+    pl.classList.add("ui");
+    clearTimeout(uiT);
+    uiT = setTimeout(() => pl.classList.remove("ui"), 2800);
+  }
+  function lompat(d) {
+    const dur = isFinite(mv.duration) ? mv.duration : Infinity;
+    mv.currentTime = Math.max(0, Math.min(dur, (mv.currentTime || 0) + d));
+    const fx = $(d < 0 ? "fxL" : "fxR");
+    fx.classList.remove("on");
+    void fx.offsetWidth;
+    fx.classList.add("on");
+    tampilUI();
+  }
+  function ganti() {
+    if (mv.paused) { const p = mv.play(); if (p && p.catch) p.catch(() => {}); }
+    else mv.pause();
+  }
+  function layarPenuh() {
+    if (document.fullscreenElement || document.webkitFullscreenElement) {
+      (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+      return;
+    }
+    const req = pl.requestFullscreen || pl.webkitRequestFullscreen;
+    if (req) { const r = req.call(pl); if (r && r.catch) r.catch(() => {}); }
+    else if (mv.webkitEnterFullscreen) mv.webkitEnterFullscreen();
+  }
+  let tapT = 0, lastTap = 0;
+  $("mTap").addEventListener("click", (e) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width;
+    const now = Date.now();
+    tampilUI();
+    if (now - lastTap < 300) {
+      clearTimeout(tapT);
+      lastTap = 0;
+      if (x < 0.38) lompat(-10);
+      else if (x > 0.62) lompat(10);
+      else ganti();
+      return;
+    }
+    lastTap = now;
+    tapT = setTimeout(ganti, 300);
+  });
+  $("mMundur").addEventListener("click", () => lompat(-10));
+  $("mMaju").addEventListener("click", () => lompat(10));
+  $("mFull").addEventListener("click", layarPenuh);
+  pl.addEventListener("mousemove", tampilUI);
+  pl.addEventListener("touchstart", tampilUI, { passive: true });
+
+  let toastTimer;
+  function toast(t) {
+    const el = $("toast");
+    el.textContent = t;
+    el.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove("show"), 1800);
+  }
+  $("mBagikan").addEventListener("click", async () => {
+    if (!aktif) return;
+    const link = location.href.split("#")[0] + "#v=" + encodeURIComponent(aktif.id);
+    if (navigator.share) {
+      try { await navigator.share({ title: aktif.judul + " - Watch Vid", url: link }); return; }
+      catch (e) { if (e && e.name === "AbortError") return; }
+    }
+    try { await navigator.clipboard.writeText(link); toast("Link tersalin"); }
+    catch (e) { toast("Link gagal disalin"); }
+  });
+  $("mTutup").addEventListener("click", tutup);
+  $("modal").addEventListener("click", (e) => { if (e.target === $("modal")) tutup(); });
+  document.addEventListener("keydown", (e) => {
+    if (!modalOpen) return;
+    if (e.key === "Escape") {
+      if (document.fullscreenElement || document.webkitFullscreenElement) return;
+      tutup();
+      return;
+    }
+    const t = e.target, tag = t.tagName;
+    if (t === mv || tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
+    if (e.key === "ArrowLeft") { e.preventDefault(); lompat(-10); }
+    else if (e.key === "ArrowRight") { e.preventDefault(); lompat(10); }
+    else if (e.key === " " && tag !== "BUTTON") { e.preventDefault(); ganti(); }
+  });
+
+  /* Interaksi */
+  $("chips").addEventListener("click", (e) => {
+    const b = e.target.closest(".chip");
+    if (!b) return;
+    state.kat = b.dataset.kat;
+    renderChips();
+    render();
+  });
+  $("q").addEventListener("input", (e) => { state.q = e.target.value; render(); });
+  $("sort").addEventListener("change", (e) => {
+    state.sort = e.target.value;
+    if (state.sort === "acak") state.acak = null;
+    render();
+  });
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-open]");
+    if (b) buka(b.dataset.open, b);
+  });
+
+  /* Mulai */
+  let lastRaw = "", lastFetch = 0;
+  async function ambil() {
+    /* Angka unik di belakang alamat + no-store supaya selalu ambil videos.json terbaru, bukan salinan lama */
+    const r = await fetch("videos.json?v=" + Date.now(), { cache: "no-store" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    lastFetch = Date.now();
+    return r.text();
+  }
+  function terapkan(raw) {
+    const data = JSON.parse(raw);
+    if (!Array.isArray(data)) throw new Error("isi videos.json harus berupa daftar");
+    VIDEOS = prep(data);
+    lastRaw = raw;
+  }
+  async function muat() {
+    try {
+      terapkan(await ambil());
+    } catch (err) {
+      $("jumlah").textContent = "";
+      $("grid").innerHTML = `<div class="empty"><strong>Daftar video gagal dimuat</strong><span>Pastikan videos.json ada di folder yang sama dengan index.html dan isinya valid (cek tanda koma dan kurung). Buka lewat GitHub Pages, bukan langsung dari berkas di HP.</span></div>`;
+      return;
+    }
+    renderChips();
+    render();
+    const id = idDariHash();
+    if (id && byId(id)) { pushed = false; bukaUI(byId(id)); }
+  }
+  /* Saat kembali ke tab ini, cek apakah daftar video sudah berubah */
+  document.addEventListener("visibilitychange", async () => {
+    if (document.hidden || modalOpen || !lastRaw || Date.now() - lastFetch < 30000) return;
+    try {
+      const raw = await ambil();
+      if (raw !== lastRaw) { terapkan(raw); renderChips(); render(); }
+    } catch (e) {}
+  });
+  muat();
+</script>
+</body>
+</html>
